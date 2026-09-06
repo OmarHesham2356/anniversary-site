@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  --background: #faf6f1;
+  --foreground: #3b3330;
+  --accent: #b3575a;
+  --accent-soft: #c47a7f;
+  --surface: #ffffff;
+  --muted: #8a7d77;
+  --font-serif: var(--font-playfair);
+  --font-sans: var(--font-nunito-sans);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --font-serif: var(--font-playfair);
+  --font-sans: var(--font-nunito-sans);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  background:
+    radial-gradient(
+      120% 60% at 50% -10%,
+      color-mix(in srgb, var(--accent-soft) 14%, transparent),
+      transparent 60%
+    ),
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-nunito-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+
+  /* Prevent horizontal overflow on mobile from over-eager animations */
+  overflow-x: hidden;
+
+  /* Remove the grey flash on tap for a smoother feel */
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* Consistent, visible focus for keyboard users */
+:focus-visible {
+  outline: none;
+}

@@ -47,10 +47,12 @@ GitHub (public template)
    ┌────┴────┐
    │         │
    ▼         ▼
-config/   Cloudinary SDK  ── server-only ──   .env.local
-anniversaryData.ts          (CLOUDINARY_*)     (gitignored)
-   │         │
+config/   Cloudinary SDK  ── server-only ──   secrets
+anniversaryData.ts          (CLOUDINARY_*)    ├ .env.local (local)
+   │         │                                  └ env vars (Vercel/CI)
    └────┬────┘
+       ▼
+ANNIVERSARY_DATA_JSON (optional, Vercel/CI)
        ▼
 Authenticated Cloudinary media
        │
@@ -228,16 +230,36 @@ Leave the fields out to keep the defaults.
 
 1. Push your repository to GitHub (the template files only).
 2. Import the repository on [vercel.com](https://vercel.com/new).
-3. Add the **same three environment variables** in the Vercel project
-   settings, **Production** and Preview:
+3. Add the following environment variables in the Vercel project settings,
+   for **Production** and Preview:
    - `CLOUDINARY_CLOUD_NAME`
    - `CLOUDINARY_API_KEY`
    - `CLOUDINARY_API_SECRET`
-4. Deploy.
+4. Because `config/anniversaryData.ts` is gitignored, Vercel wouldn't have
+   your real content. Add it as a build-time secret so it works despite the
+   missing file. Add **one more** environment variable:
+   - `ANNIVERSARY_DATA_JSON` — your full config serialized as JSON.
 
-> Tip: put your real `config/anniversaryData.ts` contents into the deployed
-> project too (e.g. paste it in Vercel or keep it local and deploy from this
-> machine). That file is gitignored, so it won't come from GitHub.
+   Generate it locally from your private file:
+
+   ```bash
+   node --experimental-strip-types -e \
+     "import('./config/anniversaryData.ts').then(m => console.log(JSON.stringify(m.anniversaryData)))"
+   ```
+
+   Paste the printed JSON string into `ANNIVERSARY_DATA_JSON` in Vercel.
+5. Deploy.
+
+The content is resolved in this priority order (build/runtime):
+
+1. `ANNIVERSARY_DATA_JSON` env var (private deployments: Vercel, CI)
+2. `config/anniversaryData.ts` local gitignored file (local dev)
+3. `config/anniversaryData.example.ts` placeholder (fresh clone — build and
+   preview work, content shows placeholders)
+
+> The example config is committed, so the app **builds and runs even without
+> the private file**. Your names, dates, captions, letter text, and public
+> IDs only ever travel via the env var above — never through Git.
 
 ---
 
@@ -299,6 +321,8 @@ types/
   the site expects). Browsers block autoplay until the splash heart tap.
 - **`/api/media` returns 404** — the public ID is whitelisted but no such
   authenticated asset exists in your account, or the credentials are wrong.
-- **Site is blank after clone** — you haven't created
-  `config/anniversaryData.ts` yet (run
-  `cp config/anniversaryData.example.ts config/anniversaryData.ts`).
+- **Site shows placeholder content after clone** — the real
+  `config/anniversaryData.ts` (or `ANNIVERSARY_DATA_JSON`) isn't available,
+  so the committed example is used. On a fresh local checkout run
+  `cp config/anniversaryData.example.ts config/anniversaryData.ts`; on
+  Vercel, set `ANNIVERSARY_DATA_JSON`.

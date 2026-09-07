@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      # Vercel builds from a git clone, so `config/anniversaryData.ts`
+      # (gitignored) and the Cloudinary env vars are absent here too —
+      # exactly like the production build. This step proves the build
+      # succeeds and falls back to the committed example config.
+      - name: Build without private config (Vercel parity)
+        run: npm run build

@@ -1,20 +1,65 @@
 import type { AnniversaryData } from "@/types/anniversary";
 
-import { anniversaryData } from "@/config/anniversaryData";
+import { anniversaryData as exampleData } from "@/config/anniversaryData.example";
 
 /**
  * PRIVATE data access.
  *
  * `config/anniversaryData.ts` is gitignored and holds your real content
- * (names, dates, captions, letter text). On a fresh clone, create it
- * from the example before building:
+ * (names, dates, captions, letter text), so a fresh clone — like a Vercel
+ * build sourced from GitHub — never receives it and the build must still
+ * succeed. Content is resolved in priority order:
  *
- *   cp config/anniversaryData.example.ts config/anniversaryData.ts
+ *  1. `ANNIVERSARY_DATA_JSON` env var (secret — set it in Vercel/CI).
+ *     The whole config serialized as JSON; never commit it.
+ *  2. `config/anniversaryData.ts` on disk (your local private file).
+ *  3. `config/anniversaryData.example.ts` (committed placeholder) so the
+ *     app never crashes on a fresh clone.
  *
- * This is the same workflow as `.env.example` -> `.env.local`, and it
- * keeps personal content out of GitHub.
+ * The `.env.local`-style workflow still works as before: with the real
+ * file present locally, it is used automatically.
  */
-export { anniversaryData };
+
+/**
+ * Loads the private config from `ANNIVERSARY_DATA_JSON` (Vercel/CI).
+ * Returns null when unset or unparseable.
+ */
+function dataFromEnv(): AnniversaryData | null {
+  const raw = process.env.ANNIVERSARY_DATA_JSON;
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AnniversaryData;
+  } catch (error) {
+    console.error(
+      "[anniversary-data] ANNIVERSARY_DATA_JSON is not valid JSON; ignoring it.",
+      error,
+    );
+    return null;
+  }
+}
+
+/**
+ * Loads the local gitignored config via dynamic import so a missing file
+ * (fresh clone / Vercel) is caught at runtime instead of failing the
+ * build or type-check.
+ */
+async function dataFromLocalFile(): Promise<AnniversaryData | null> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore -- module exists only where the private config was set up.
+    const mod = await import("@/config/anniversaryData");
+    return (
+      (mod as { anniversaryData?: AnniversaryData } | undefined)
+        ?.anniversaryData ?? null
+    );
+  } catch {
+    return null;
+  }
+}
+
+export const anniversaryData: AnniversaryData =
+  dataFromEnv() ?? (await dataFromLocalFile()) ?? exampleData;
+
 export type { AnniversaryData };
 
 /**

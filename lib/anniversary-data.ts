@@ -22,17 +22,40 @@ import { anniversaryData as exampleData } from "@/config/anniversaryData.example
 
 /**
  * Loads the private config from `ANNIVERSARY_DATA_JSON` (Vercel/CI).
- * Returns null when unset or unparseable.
+ * Returns null when unset, unparseable, or not shaped like the config.
+ * Any refusal is logged so the Vercel build log shows why the value was
+ * ignored.
  */
 function dataFromEnv(): AnniversaryData | null {
   const raw = process.env.ANNIVERSARY_DATA_JSON;
   if (!raw) return null;
+
+  const snippet = () => raw.trim().replace(/\s+/g, " ").slice(0, 80);
+
   try {
-    return JSON.parse(raw) as AnniversaryData;
+    const parsed: unknown = JSON.parse(raw);
+    const couple = (parsed as { couple?: unknown } | null)?.couple;
+    if (
+      parsed === null ||
+      typeof parsed !== "object" ||
+      typeof couple !== "object" ||
+      couple === null
+    ) {
+      console.warn(
+        "[anniversary-data] ANNIVERSARY_DATA_JSON is set but does not look like an AnniversaryData object (expected an object with a 'couple' field). Ignoring it.",
+      );
+      console.warn(`  value starts with: ${snippet()}`);
+      return null;
+    }
+    return parsed as AnniversaryData;
   } catch (error) {
     console.error(
       "[anniversary-data] ANNIVERSARY_DATA_JSON is not valid JSON; ignoring it.",
-      error,
+    );
+    console.error(
+      `  value starts with: ${snippet()} — reason: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
     );
     return null;
   }
@@ -57,8 +80,36 @@ async function dataFromLocalFile(): Promise<AnniversaryData | null> {
   }
 }
 
-export const anniversaryData: AnniversaryData =
-  dataFromEnv() ?? (await dataFromLocalFile()) ?? exampleData;
+/**
+ * Resolves the active config and logs which source was used. This runs at
+ * build time for statically rendered pages (like the home page), so the
+ * Vercel build log always shows which source produced the output.
+ */
+async function resolveAnniversaryData(): Promise<AnniversaryData> {
+  const fromEnv = dataFromEnv();
+  if (fromEnv) {
+    console.info(
+      "[anniversary-data] using config source: env (ANNIVERSARY_DATA_JSON)",
+    );
+    return fromEnv;
+  }
+
+  const fromFile = await dataFromLocalFile();
+  if (fromFile) {
+    console.info(
+      "[anniversary-data] using config source: local file (config/anniversaryData.ts)",
+    );
+    return fromFile;
+  }
+
+  console.warn(
+    "[anniversary-data] no private config found — using placeholder example data. " +
+      "Set ANNIVERSARY_DATA_JSON (Vercel/CI) or create config/anniversaryData.ts locally.",
+  );
+  return exampleData;
+}
+
+export const anniversaryData: AnniversaryData = await resolveAnniversaryData();
 
 export type { AnniversaryData };
 

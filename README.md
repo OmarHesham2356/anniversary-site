@@ -321,8 +321,17 @@ types/
   the site expects). Browsers block autoplay until the splash heart tap.
 - **`/api/media` returns 404** — the public ID is whitelisted but no such
   authenticated asset exists in your account, or the credentials are wrong.
-- **Site shows placeholder content after clone** — the real
-  `config/anniversaryData.ts` (or `ANNIVERSARY_DATA_JSON`) isn't available,
-  so the committed example is used. On a fresh local checkout run
-  `cp config/anniversaryData.example.ts config/anniversaryData.ts`; on
-  Vercel, set `ANNIVERSARY_DATA_JSON`.
+- **Deployed site shows placeholder content** — the build that produced it
+  didn't have the private config. Because the home page is statically
+  prerendered, the config source is resolved **at build time**. Check the
+  Vercel build log for a `[anniversary-data] using config source: ...` line:
+  - `env (ANNIVERSARY_DATA_JSON)` → the env var was read. If the site still
+    shows placeholders, the value itself is placeholder data.
+  - `local file` → only happens on machines that have the gitignored file.
+  - the "no private config found" warning → the env var was absent during
+    the build. Set `ANNIVERSARY_DATA_JSON` for **Production** in Vercel and
+    redeploy (a new build is required; adding the var to an already-built
+    deployment changes nothing).
+  - a `value starts with: ...` message → the var is set but its value was
+    rejected (invalid JSON or wrong shape). Paste the generated single-line
+    JSON without surrounding quotes.
